@@ -1,7 +1,8 @@
 !function() {
 	const config = {
-		fps: 10,
-		pixelPerRow: 45 
+		fps: 5,
+		pixelPerRow: 45,
+		colorMixMethod: 'full'
 	}
 	
 	const video = document.querySelector('video');
@@ -9,6 +10,22 @@
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
 	const delay = Math.floor(1000 / config.fps)
+	const colorMixMethods = {
+		none: function(grid) {
+			return Array.prototype.slice.call(grid.data, 0, 3);
+		},
+		full: function(grid) {
+			let r = g = b = 0;
+			const { data } = grid;
+			const pixels = data.length / 4;
+			for (let i = 0; i < pixels; i++) {
+				r += data[i * 4];
+				g += data[i * 4 + 1];
+				b += data[i * 4 + 2];
+			}
+			return [r, g, b].map((c) => Math.floor(c / pixels) );
+		}
+	}
 
 	function requestFrame(callback) {
 		setTimeout(callback, delay);
@@ -24,18 +41,19 @@
 		const gridWidth = Math.floor(videoWidth / column);
 		const row = Math.floor(videoHeight / gridWidth);
 		const viewer = new Viewer(row, column);
-
+		const colorMixMethod = colorMixMethods[config.colorMixMethod];
 		function play() {
-			const grids = [];
 			ctx.drawImage(video, 0, 0);
+
 			for (let i = 0; i < row; i++) {
 				const offsetY = i * gridWidth;
 				for (let j = 0; j < column; j++) {
 					const offsetX = j * gridWidth;
-					grids.push(ctx.getImageData(offsetX, offsetY, gridWidth, gridWidth));
+					const grid = ctx.getImageData(offsetX, offsetY, gridWidth, gridWidth);
+					viewer.add(colorMixMethod(grid))
 				}
 			}
-			grids.forEach((g) => viewer.add(Array.prototype.slice.call(g.data, 0, 3)));
+
 			viewer.render();
 			requestFrame(play);
 //			requestAnimationFrame(play);
