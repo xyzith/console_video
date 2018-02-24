@@ -1,15 +1,17 @@
 !function() {
+	const config = {
+		fps: 4,
+		pixelPerRow: 45 
+	}
+	
 	const video = document.querySelector('video');
 	if (!video) return false;
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
-	const config = {
-		fps: 3,
-		pixelPerRow: 45 
-	}
+	const delay = Math.floor(1000 / config.fps)
 
 	function requestFrame(callback) {
-		setTimeout(callback, 250);
+		setTimeout(callback, delay);
 	} 
 
 	function start() {
