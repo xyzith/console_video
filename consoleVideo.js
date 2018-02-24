@@ -1,6 +1,6 @@
 !function() {
 	const config = {
-		fps: 4,
+		fps: 10,
 		pixelPerRow: 45 
 	}
 	
@@ -38,8 +38,10 @@
 			grids.forEach((g) => viewer.add(Array.prototype.slice.call(g.data, 0, 3)));
 			viewer.render();
 			requestFrame(play);
+//			requestAnimationFrame(play);
 		}
 		requestFrame(play);
+//		requestAnimationFrame(play);
 	}
 
 	class Viewer {
