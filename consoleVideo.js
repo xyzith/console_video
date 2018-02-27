@@ -13,8 +13,11 @@ function getFileName(video) {
 	return src.match(/[^\/]*$/)
 }
 
-function playVideo(video, config = { fps: 1, ppr: 4, mixer: 'full' }) {
+function initVideo(video, config = { fps: 1, ppr: 4, mixer: 'full' }) {
 	if (!video) return false;
+	if (player) {
+		player.pause();
+	}
 	player = new Player(video, config);
 }
 
@@ -26,13 +29,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 			sendResponse(Array.prototype.map.call(video_list, (v) => getFileName(v)));
 			break;
 		case 'INIT_VIDEO':
-			playVideo(video_list[request.idx], request.config);
+			initVideo(video_list[request.idx], request.config);
 			break;
 		case 'PLAY':
-			player.play();
+			if(player) {
+				player.play();
+			} else {
+				initVideo(video_list[0], request.config);
+			}
 			break;
 		case 'PAUSE':
-			player.pause();
+			player && player.pause();
 			break;
 	}
 });

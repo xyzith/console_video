@@ -29,7 +29,7 @@ function getConfig() {
 function regButtons(id) {
 	document.querySelector('.play').addEventListener('click', (e) => {
 		e.preventDefault();
-		sendMessage(id, { action: 'PLAY' })
+		sendMessage(id, { action: 'PLAY', config: getConfig() })
 	});
 	document.querySelector('.pause').addEventListener('click', (e) => {
 		e.preventDefault();
