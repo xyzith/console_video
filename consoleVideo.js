@@ -1,109 +1,129 @@
 let video_list;
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-	console.log('123');
-	if(sender.id !== chrome.runtime.id) { return false; }
-	console.log(request);
-	switch(request.action) {
-		case 'FETCH_VIDEOS':
-			video_list = fetchVideo();
-			sendResponse(Array.prototype.map.call(video_list, (v) => v.src ));
-		case 'PLAY_VIDEO':
-			playVideo(video_list[request.idx]);
-	}
-});
+let player;
+
 function fetchVideo() {
 	return document.getElementsByTagName('video');
 }
 
-function playVideo(video) {
+function getFileName(video) {
+	let src = '';
+	if (!(src = video.src)) {
+		src = video.querySelector('source').src;
+	}
+	return src.match(/[^\/]*$/)
+}
+
+function playVideo(video, config = { fps: 1, ppr: 4, mixer: 'full' }) {
 	if (!video) return false;
+	player = new Player(video, config);
+}
 
-	const config = {
-		fps: 5,
-		pixelPerRow: 30,
-		colorMixMethod: 'full'
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+	if(sender.id !== chrome.runtime.id) { return false; }
+	switch(request.action) {
+		case 'FETCH_VIDEOS':
+			video_list = fetchVideo();
+			sendResponse(Array.prototype.map.call(video_list, (v) => getFileName(v)));
+			break;
+		case 'INIT_VIDEO':
+			playVideo(video_list[request.idx], request.config);
+			break;
+		case 'PLAY':
+			player.play();
+			break;
+		case 'PAUSE':
+			player.pause();
+			break;
 	}
-	
-	const canvas = document.createElement('canvas');
-	const ctx = canvas.getContext('2d');
-	const delay = Math.floor(1000 / config.fps)
-	const colorMixMethods = {
-		none: function(grid) {
-			return Array.prototype.slice.call(grid.data, 0, 3);
-		},
-		full: function(grid) {
-			let r = g = b = 0;
-			const { data } = grid;
-			const pixels = data.length / 4;
-			for (let i = 0; i < pixels; i++) {
-				const offset = i * 4;
-				r += data[offset];
-				g += data[offset + 1];
-				b += data[offset + 2];
-			}
-			return [r, g, b].map((c) => Math.floor(c / pixels) );
-		}
-	}
+});
 
-	function requestFrame(callback) {
-		return setTimeout(callback, delay);
-	} 
-
-	function start() {
-		const { videoWidth, videoHeight } = video;
-		video.crossorigin = "anonymous";
-
-		canvas.width = videoWidth;
-		canvas.height = videoHeight;
-
-		const column = config.pixelPerRow;
-		const gridWidth = Math.floor(videoWidth / column);
-		const row = Math.floor(videoHeight / gridWidth);
-		const viewer = new Viewer(row, column);
-		const colorMixMethod = colorMixMethods[config.colorMixMethod];
-		function play() {
-			ctx.drawImage(video, 0, 0);
-
-			for (let i = 0; i < row; i++) {
-				const offsetY = i * gridWidth;
-				for (let j = 0; j < column; j++) {
-					const offsetX = j * gridWidth;
-					const grid = ctx.getImageData(offsetX, offsetY, gridWidth, gridWidth);
-					viewer.add(colorMixMethod(grid))
+class Player {
+	constructor(video, config) {
+		const mixers = {
+			none: function(grid) {
+				return Array.prototype.slice.call(grid.data, 0, 3);
+			},
+			all: function(grid) {
+				let [r, g, b] = [0, 0, 0];
+				const { data } = grid;
+				const pixels = data.length / 4;
+				for (let i = 0; i < pixels; i++) {
+					const offset = i * 4;
+					r += data[offset];
+					g += data[offset + 1];
+					b += data[offset + 2];
 				}
+				return [r, g, b].map((c) => Math.floor(c / pixels) );
 			}
-
-			viewer.render();
-			requestFrame(play);
-//			requestAnimationFrame(play);
 		}
-		requestFrame(play);
-//		requestAnimationFrame(play);
-	}
-	if (!video.paused) {
-		start();
-	} else {
-		//video.addEventListener('play', start);
-	}
 
-};
-class Controller {
-	constructor(video) {
+		this.state = 'INIT';
+		this.mixer = mixers[config.mixer];
+		this.canvas = document.createElement('canvas');
+		this.ctx = this.canvas.getContext('2d');
+		this.delay = Math.floor(1000 / config.fps);
+		this.config = config;
 		this.video = video;
 		this.frameId;
+		this.init();
 
 		if (!this.video.paused) {
-			//TODO start();
+			this.play();
 		} else {
-			//video.addEventListener('play', start);
+			if (this.video.readyState === 4) {
+				this.render();
+			}
+			video.addEventListener('play', this.play.bind(this));
 		}
 	}
+
+	init() {
+		const { videoWidth, videoHeight } = this.video;
+
+		this.canvas.width = videoWidth;
+		this.canvas.height = videoHeight;
+		this.column = this.config.ppr;
+		this.gridWidth = Math.floor(videoWidth / this.column);
+		this.row = Math.floor(videoHeight / this.gridWidth);
+		this.viewer = new Viewer(this.row, this.column);
+		this.state = "READY";
+	}
+
+	render() {
+		console.log()
+		const { ctx, viewer, gridWidth, row, column, video, mixer } = this;
+		ctx.drawImage(video, 0, 0);
+		for (let i = 0; i < row; i++) {
+			const offsetY = i * gridWidth;
+			for (let j = 0; j < column; j++) {
+				const offsetX = j * gridWidth;
+				const grid = ctx.getImageData(offsetX, offsetY, gridWidth, gridWidth);
+				viewer.add(mixer(grid))
+			}
+		}
+		viewer.render();
+	}
+
 	play() {
+		const { state } = this;
+		if(state === 'INIT') {
+			this.init();
+			this.play();
+		} else if(state != 'PLAYING') {
+			this.frameId = setTimeout(this.anime.bind(this), 0);
+			this.state = 'PLAYING';
+		}
 	}
-	stop() {
+
+	anime() {
+		const { delay } = this;
+		this.render();
+		this.frameId = setTimeout(this.anime.bind(this), delay);
+	}
+
+	pause() {
 		clearTimeout(this.frameId);
-	}
-	start() {
+		this.state = 'PAUSE';
 	}
 }
 

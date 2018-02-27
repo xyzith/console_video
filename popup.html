@@ -1,39 +1,55 @@
 <!doctype html>
 <html>
-    <head>
-        <title>Console Videos</title>
-        <style>
-            main {
-                max-width: 320px;
-            }
-            .videos button {
-                border: 0px none transparent;
-                background-color: LightGreen;
-                border-radius: 5px;
-                text-overflow: ellipsis;
-                padding: 4px 8px;
-            }
+	<head>
+		<title>Console Videos</title>
+		<style>
+			main {
+				width: 280px;
+			}
+			main .videos button {
+				border: 0px none transparent;
+				background-color: LightGreen;
+				border-radius: 5px;
+				text-overflow: ellipsis;
+				padding: 4px 8px;
+				margin: 4px 0;
+				display: block;
+			}
+			#options .row {
+				display: flex;
+				margin: 4px 0;
+			}
+			#options .row > input {
+				flex: 1;
+			}
+			main .controller {
+				text-align: center;
+			}
+			main .controller button{
+				margin: 4px 8px;
+			}
 
-        </style>
-    </head>
-    <body>
-        <main>
-            <div class="videos"><button>alkdsjfalkdsjfldasdlfajdssjlfajdsfjdfljdsaflkjldsjlfajdsfjdfljdsaflkj</button></div>
-            <form id="options">
-                <div >
-                    <label><span>FPS:</span><input type="number" value="5"></label>
-                </div>
-                <div>
-                    <label>Pixels per row:<input type="number" value="45"></label>
-                </div>
-                <div>
-                    <span>Color mix method:</span>
-                    <label><input type="radio" value="none">none</label>
-                    <label><input type="radio" checked value="full">full</label>
-                </div>
-            </form>
-        </main>
-        <script src="popup.js"></script>
-    </body>
+
+		</style>
+	</head>
+	<body>
+		<main>
+			<div class="videos"></div>
+			<form id="options">
+				<label class="row"><span>FPS:</span><input type="number" value="5" name="fps"></label>
+				<label class="row"><span>Pixels / Row:</span><input type="number" value="30" name="ppr"></label>
+				<div>
+					<span>Color mixer:</span>
+					<label><input type="radio" name="mixer" value="none">none</label>
+					<label><input type="radio" name="mixer" checked value="all">all</label>
+				</div>
+			</form>
+			<div class="controller">
+				<button class="play">&#9658;</button>
+				<button class="pause">&#10074;&#10074;</button>
+			</div>
+		</main>
+		<script src="popup.js"></script>
+	</body>
 </html>
 

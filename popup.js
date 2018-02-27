@@ -15,9 +15,34 @@ function sendMessage(tabId, data) {
 	});
 }
 
+function getConfig() {
+	const cfg = {};
+	const form = document.forms.options;
+	const formData = new FormData(form);
+	for (let [k, v] of formData.entries()) {
+		console.log(k, v);
+		cfg[k] = v;
+	}
+	return cfg;
+}
+
+function regButtons(id) {
+	document.querySelector('.play').addEventListener('click', (e) => {
+		e.preventDefault();
+		sendMessage(id, { action: 'PLAY' })
+	});
+	document.querySelector('.pause').addEventListener('click', (e) => {
+		e.preventDefault();
+		sendMessage(id, { action: 'PAUSE' })
+	});
+};
+
+
 getCurrentChromeTab().then((tab) => {
 	const { id } = tab;
 	const target = document.querySelector('main .videos');
+
+	regButtons(id);
 	
 	sendMessage(id, { action: "FETCH_VIDEOS" }).then((videos) => {
 		console.log('msg return', videos);
@@ -25,7 +50,6 @@ getCurrentChromeTab().then((tab) => {
 			const btn = new VideoButton(id, ...args);
 			target.appendChild(btn.render());
 		});
-		// render videos
 	});
 });
 
@@ -37,8 +61,9 @@ class VideoButton {
 	}
 	playVideo() {
 		sendMessage(this.tabId, {
-			action: "PLAY_VIDEO",
+			action: "INIT_VIDEO",
 			idx: this.idx,
+			config: getConfig(),
 		});
 	}
 	render() {
@@ -52,4 +77,3 @@ class VideoButton {
 	}
 }
 
-// TODO halt clear resume
